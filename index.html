@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jumpscare (cuidado!)</title>
+<style>
+  :root{
+    --bg:#0b0b0c;
+    --accent:#ff1a1a;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--bg);
+    color:#fff;
+    font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .container{
+    text-align:center;
+    padding:24px;
+  }
+  button{
+    background:#222;
+    border:2px solid #444;
+    color:#fff;
+    padding:14px 22px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:18px;
+  }
+  button:hover{ transform:translateY(-3px); }
+  .hint{ margin-top:12px; font-size:13px; color:#bbb; }
+
+  /* Overlay do jumpscare (esconde por padrão) */
+  .scare-overlay{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,0);
+    z-index:9999;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .12s linear;
+  }
+
+  /* quando ativo: */
+  .scare-overlay.active{
+    pointer-events:auto;
+    opacity:1;
+    background:rgba(0,0,0,0.7);
+  }
+
+  /* O "monstro" SVG central */
+  .scare-card{
+    transform:scale(.6) rotate(0deg);
+    transition: transform .2s ease;
+    filter: drop-shadow(0 10px 30px rgba(0,0,0,.8));
+  }
+  .scare-overlay.active .scare-card{
+    transform:scale(1.15) rotate(-6deg);
+    transition: transform .06s ease;
+  }
+
+  /* Flash rápido */
+  .flash{
+    position:fixed;
+    inset:0;
+    background:var(--accent);
+    mix-blend-mode:screen;
+    opacity:0;
+    pointer-events:none;
+    z-index:10000;
+    transition:opacity .06s linear;
+  }
+  .flash.on{ opacity:1; transition:opacity .02s linear; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Jumpscare</h1>
+  <p>Clique no botão abaixo para o efeito.</p>
+  <button id="trigger">Cuidado — Clique aqui</button>
+  <div class="hint">Dica: abaixe o volume antes de testar.</div>
+</div>
+
+<!-- Overlay do jumpscare -->
+<div id="scare" class="scare-overlay" aria-hidden="true">
+  <div class="scare-card" id="scareCard" role="img" aria-label="imagem assustadora">
+    <!-- SVG gerado inline (rosto assustador estilizado) -->
+    <svg width="420" height="420" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
