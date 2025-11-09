@@ -3,96 +3,158 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jumpscare (cuidado!)</title>
+<title>Jumpscare</title>
 <style>
-  :root{
-    --bg:#0b0b0c;
-    --accent:#ff1a1a;
-  }
-  html,body{
-    height:100%;
-    margin:0;
-    background:var(--bg);
-    color:#fff;
-    font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .container{
-    text-align:center;
-    padding:24px;
-  }
-  button{
-    background:#222;
-    border:2px solid #444;
-    color:#fff;
-    padding:14px 22px;
-    border-radius:10px;
-    cursor:pointer;
-    font-size:18px;
-  }
-  button:hover{ transform:translateY(-3px); }
-  .hint{ margin-top:12px; font-size:13px; color:#bbb; }
-
-  /* Overlay do jumpscare (esconde por padrão) */
-  .scare-overlay{
-    position:fixed;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(0,0,0,0);
-    z-index:9999;
-    pointer-events:none;
-    opacity:0;
-    transition:opacity .12s linear;
-  }
-
-  /* quando ativo: */
-  .scare-overlay.active{
-    pointer-events:auto;
-    opacity:1;
-    background:rgba(0,0,0,0.7);
-  }
-
-  /* O "monstro" SVG central */
-  .scare-card{
-    transform:scale(.6) rotate(0deg);
-    transition: transform .2s ease;
-    filter: drop-shadow(0 10px 30px rgba(0,0,0,.8));
-  }
-  .scare-overlay.active .scare-card{
-    transform:scale(1.15) rotate(-6deg);
-    transition: transform .06s ease;
-  }
-
-  /* Flash rápido */
-  .flash{
-    position:fixed;
-    inset:0;
-    background:var(--accent);
-    mix-blend-mode:screen;
-    opacity:0;
-    pointer-events:none;
-    z-index:10000;
-    transition:opacity .06s linear;
-  }
-  .flash.on{ opacity:1; transition:opacity .02s linear; }
+  html,body{height:100%;margin:0;background:#000;color:#fff;font-family:system-ui,Segoe UI,Roboto,Arial;display:flex;align-items:center;justify-content:center;}
+  #wrap{text-align:center}
+  #go{background:#111;border:2px solid #333;color:#fff;padding:18px 28px;border-radius:12px;font-size:18px;cursor:pointer}
+  .scare-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:99999;pointer-events:none;opacity:0;transition:opacity .06s linear}
+  .scare-overlay.active{pointer-events:auto;opacity:1}
+  .flash{position:fixed;inset:0;z-index:100000;pointer-events:none;background:#fff;opacity:0;transition:opacity .02s linear}
+  .scare-card{transform:scale(.7);transition:transform .08s ease;filter:drop-shadow(0 20px 40px rgba(0,0,0,.8));}
+  .scare-overlay.active .scare-card{transform:scale(1.2) rotate(-6deg)}
 </style>
 </head>
 <body>
+  <div id="wrap">
+    <button id="go">Clique Aqui</button>
+  </div>
 
-<div class="container">
-  <h1>Jumpscare</h1>
-  <p>Clique no botão abaixo para o efeito.</p>
-  <button id="trigger">Cuidado — Clique aqui</button>
-  <div class="hint">Dica: abaixe o volume antes de testar.</div>
-</div>
+  <div id="overlay" class="scare-overlay" aria-hidden="true">
+    <div class="scare-card" role="img" aria-label="imagem assustadora">
+      <!-- SVG assustador -->
+      <svg width="480" height="480" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="g" cx="50%" cy="35%">
+            <stop offset="0%" stop-color="#fff"/>
+            <stop offset="30%" stop-color="#ffdede"/>
+            <stop offset="100%" stop-color="#ff2b2b"/>
+          </radialGradient>
+        </defs>
+        <rect width="512" height="512" rx="40" fill="#000"/>
+        <g transform="translate(0,10)">
+          <ellipse cx="256" cy="220" rx="180" ry="200" fill="url(#g)"/>
+          <circle cx="180" cy="170" r="36" fill="#000"/>
+          <circle cx="332" cy="170" r="36" fill="#000"/>
+          <circle cx="190" cy="160" r="9" fill="#fff"/>
+          <circle cx="342" cy="160" r="9" fill="#fff"/>
+          <path d="M150 300 Q256 370 362 300 Q330 460 256 460 Q182 460 150 300 Z" fill="#000"/>
+          <g fill="#fff">
+            <polygon points="200,320 216,370 184,370"/>
+            <polygon points="240,320 256,370 224,370"/>
+            <polygon points="280,320 296,370 264,370"/>
+            <polygon points="320,320 336,370 304,370"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
 
-<!-- Overlay do jumpscare -->
-<div id="scare" class="scare-overlay" aria-hidden="true">
-  <div class="scare-card" id="scareCard" role="img" aria-label="imagem assustadora">
-    <!-- SVG gerado inline (rosto assustador estilizado) -->
-    <svg width="420" height="420" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-      <defs>
+  <div id="flash" class="flash" aria-hidden="true"></div>
+
+<script>
+const btn = document.getElementById('go');
+const overlay = document.getElementById('overlay');
+const flash = document.getElementById('flash');
+
+async function reliableAudioStart() {
+  const CtxClass = window.AudioContext || window.webkitAudioContext;
+  if (!CtxClass) return null;
+  const ctx = new CtxClass();
+  // garantir resume se em estado suspenso
+  if (ctx.state === 'suspended') {
+    try { await ctx.resume(); } catch(e){}
+  }
+  return ctx;
+}
+
+function playScareSound(ctx) {
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  // Noise buffer (white noise)
+  const length = Math.floor(ctx.sampleRate * 0.35);
+  const buf = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < length; i++) {
+    const t = i / length;
+    // envelope inverto (mais alto no início)
+    data[i] = (Math.random() * 2 - 1) * (1 - t) * (1 - t*t);
+  }
+  const noise = ctx.createBufferSource();
+  noise.buffer = buf;
+
+  // filtro e ganho para corpo do som
+  const low = ctx.createBiquadFilter();
+  low.type = 'lowpass';
+  low.frequency.value = 1100;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.exponentialRampToValueAtTime(0.9, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+
+  // pequeno "boom" com oscilador
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(90, now);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, now);
+  og.gain.exponentialRampToValueAtTime(0.6, now + 0.02);
+  og.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+  // conectar tudo
+  noise.connect(low);
+  low.connect(gain);
+  osc.connect(og);
+  og.connect(gain);
+  gain.connect(ctx.destination);
+
+  noise.start(now);
+  noise.stop(now + 0.35);
+  osc.start(now);
+  osc.stop(now + 0.18);
+}
+
+function doFlash() {
+  flash.style.opacity = '1';
+  // rápido flash branco -> vermelho -> off
+  setTimeout(()=> flash.style.opacity = '0', 80);
+}
+
+function showOverlay() {
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden','false');
+}
+
+function hideOverlay() {
+  overlay.classList.remove('active');
+  overlay.setAttribute('aria-hidden','true');
+}
+
+btn.addEventListener('click', async () => {
+  // tentar fullscreen (opcional)
+  try {
+    if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+  } catch(e){}
+
+  // iniciar áudio
+  const ctx = await reliableAudioStart();
+
+  // executar sequência rápida
+  doFlash();
+  setTimeout(() => {
+    playScareSound(ctx);
+    showOverlay();
+    if (navigator.vibrate) navigator.vibrate([80,30,80]);
+  }, 60);
+
+  // esconder e sair do fullscreen depois
+  setTimeout(async () => {
+    hideOverlay();
+    try { if (document.fullscreenElement) await document.exitFullscreen(); } catch(e){}
+  }, 1200);
+});
+</script>
+</body>
+              </html>
